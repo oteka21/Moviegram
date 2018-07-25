@@ -47,7 +47,8 @@ body {
 
 /*Logo*/
 .logo {
-
+  text-transform: uppercase;
+  font-size: 30px;
 }
 .logo-image {
   margin: 0;
