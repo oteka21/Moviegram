@@ -1,26 +1,90 @@
-// (async function loadList(){
+//load friends playList
+(async function loadFriendList(){
+	async function getData(Url){
+		const response = await fetch(Url)
+		const data =  await response.json();
+		return data;
+	}
 
-// })()
+	let $friendsPlayListContainer = document.querySelector('.sidebarPlaylist ul');
+	function templateFriendPlayList(friend){
+		return (
+			`<li class="playlistFriends-item fadeIn">
+              <a href="#">
+                <img src="${friend.results[0].picture.thumbnail}" alt="${friend.results[0].name.first} ${friend.results[0].name.last}" />
+                <span>
+                  ${friend.results[0].name.first} ${friend.results[0].name.last}
+                </span>
+              </a>
+            </li>`
+			);
+	}
+	function renderFriendsPlaylist(playList){
+		playList.forEach( (element) => {
+			const HTMLPlayList = templateFriendPlayList(element);
+			$friendsPlayListContainer.innerHTML += HTMLPlayList;
+		});
+	}
+	const friendsPlayList =[];
+	for (let i = 0; i < 10; i++){
+		friendsPlayList.push(await getData('https://randomuser.me/api/','playlist'));
+	}
+	// console.log(friendsPlayList);
+	renderFriendsPlaylist(friendsPlayList);
+})();
+(async function loadAnotherMovieList(){
+	const URL = 'https://yts.am/api/v2/'; 
+	const genre = ['action','horror','animation'];
+	const $moviePlayListContainer = document.querySelector('.sidebarPlaylist ol');
+	function random(max,min){
+		return Math.floor((Math.random()*max) + min); 
+	}
+	async function getData(Url){
+		const response = await fetch(Url)
+		const data =  await response.json();
+		if (data.data.movie_count > 0){
+			return data;
+		}else{
+			throw new Error('no se encontro ninguna pelicula')
+		}
+		return data;
+	}
+	function HTMLTemplatePlayListMovie(pelicula){
+		return (
+				`<li class="myPlaylist-item">
+              <a href="#">
+                <span>
+                  ${pelicula.title}
+                </span>
+              </a>
+            </li>`
+			);
+	}
+	function renderPlayListMovie(playlist){
+		playlist.forEach((element) => {
+			let HTMLString = HTMLTemplatePlayListMovie(element);
+			$moviePlayListContainer.innerHTML += HTMLString;
+		});
+	}
+
+	const {data:{movies:playlistMovie}} = await getData(`${URL}list_movies.json?genre=${genre[random(3,0)]}`);
+	renderPlayListMovie(playlistMovie);
+})();
+
 (async function loadMovies(){
 	const URL = 'https://yts.am/api/v2/';
 	//accion
 	//terror
 	//animacion
-	function getPelis(data){
-	if (data.data.movie_count > 0){
+	async function getData(Url){
+		const response = await fetch(Url)
+		const data =  await response.json();
+		if (data.data.movie_count > 0){
+			return data;
+		}else{
+			throw new Error('no se encontro ninguna pelicula')
+		}
 		return data;
-	}else{
-		throw new Error('no se encontro ninguna pelicula')
-	}
-	}
-	async function getData(Url,type){
-	const response = await fetch(Url)
-	const data =  await response.json();
-	if (type == 'pelis'){
-		return getPelis(data);
-	}else{
-		return data;
-	}
 	}
 
 	const $form = document.getElementById('form');
@@ -70,7 +134,7 @@
 				data:{
 					movies:peli
 				}
-			} =  await getData(`${URL}list_movies.json?limit=1&query_term=${data.get('name')}`,'pelis')
+			} =  await getData(`${URL}list_movies.json?limit=1&query_term=${data.get('name')}`)
 			const HTMLString = featuringTemplate(peli[0]);
 			$featuringContainer.innerHTML = HTMLString;
 
@@ -162,43 +226,27 @@
 				addEventClick(movieElement);
 		});
 	}
-	//load playList
-	let $friendsPlayListContainer = document.querySelector('.sidebarPlaylist ul');
-	function templateFriendPlayList(friend){
-		return (
-			`<li class="playlistFriends-item fadeIn">
-              <a href="#">
-                <img src="${friend.results[0].picture.medium}" alt="${friend.results[0].name.first} ${friend.results[0].name.last}" />
-                <span>
-                  ${friend.results[0].name.first} ${friend.results[0].name.last}
-                </span>
-              </a>
-            </li>`
-			);
-	}
 
-	function renderFriendsPlaylist(playList){
-		playList.forEach( (element) => {
-			const HTMLPlayList = templateFriendPlayList(element);
-			$friendsPlayListContainer.innerHTML += HTMLPlayList;
-		});
+	async function cacheExist(category){
+		const list = `${category}List`;
+		const cacheList = window.localStorage.getItem(list);
+		if(cacheList){
+			return JSON.parse(cacheList);
+		}else{
+			const {data: {movies: data}} = await getData(`${URL}list_movies.json?genre=${category}`);
+			window.localStorage.setItem(`${list}`,JSON.stringify(data));
+			return data;
+		}
 	}
-
-	const friendsPlayList =[];
-	for (let i = 0; i < 20; i++){
-		friendsPlayList.push(await getData('https://randomuser.me/api/','playlist'));
-	}
-	renderFriendsPlaylist(friendsPlayList);
-
-	const {data: {movies: actionList}} = await getData(`${URL}list_movies.json?genre=action`,'pelis');
+	const actionList = await cacheExist('action');
 	const $actionContainer = document.querySelector('#action');
 	renderMovieList(actionList,$actionContainer,'action');
 
-	const {data: {movies: horrorList}} = await getData(`${URL}list_movies.json?genre=horror`,'pelis');
+	const horrorList = await cacheExist('horror');
 	const $horrorContainer = document.getElementById('horror');
 	renderMovieList(horrorList,$horrorContainer,'horror');
 	
-	const {data: {movies: animationList}} = await getData(`${URL}list_movies.json?genre=animation`,'pelis');
+	const animationList = await cacheExist('animation');
 	const $animationContainer = document.getElementById('animation');
 	renderMovieList(animationList,$animationContainer,'animation');
 
